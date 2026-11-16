@@ -16,3 +16,5 @@
 .mivo-revealed-image{max-height:100%;max-width:100%;object-fit:contain;border-radius:12px;animation:mivo-reveal-in .8s ease-out both}.mivo-reveal-panel .countdown{font-size:clamp(20px,4vw,31px);min-height:42px}
 @keyframes mivo-cube-spin{from{transform:rotateX(-12deg) rotateY(0)}to{transform:rotateX(-12deg) rotateY(360deg)}}@keyframes mivo-float{to{transform:translateY(-12px)}}@keyframes mivo-pulse{to{opacity:.45;transform:scale(1.15)}}@keyframes mivo-border-orbit{to{filter:hue-rotate(360deg)}}@keyframes mivo-reveal-in{from{opacity:0;transform:scale(.8);filter:brightness(2)}to{opacity:1;transform:scale(1);filter:brightness(1)}}
 @media(prefers-reduced-motion:reduce){.mivo-mystery-stage,.mivo-mystery-cube,.mivo-reveal-panel::before,.mivo-reveal-art::before,.mivo-revealed-image{animation:none!important}}
+/* Dynamic content and social links */
+.mivo-managed-card{padding:13px 0;border-bottom:1px solid #ffffff19}.mivo-managed-card h4{margin:0 0 7px}.mivo-managed-card p{margin:0 0 9px}.mivo-footer-social{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
