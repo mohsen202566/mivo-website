@@ -39,3 +39,7 @@ Upload **the contents** of this folder to the root of `mivo-website` GitHub repo
 [ ] Connect background push notifications with opt-in and unsubscribe
 [ ] Replace placeholder/unknown official social URLs only with verified URLs
 [ ] Test on Android/iOS, desktop and slow connections
+
+
+## V3 cinematic introduction
+The hero uses three copies of the EXISTING assets/banner.png with CSS masks to reveal eyes, then the MIVO wordmark, then the full banner while scrolling. No separate smile animation or new image is introduced. Supports reduced-motion preference. No changes to OpenSea configuration or the backend. Upload extracted files preserving folder structure; do not upload ZIP as a site file.
