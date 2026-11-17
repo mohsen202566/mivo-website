@@ -1,0 +1,14 @@
+MIVO Public Site Alerts — setup
+
+1) Upload the new mivo-public.js and functions/api/report-error.js into the mivo-website GitHub repo. Keep the exact folder structure.
+2) Cloudflare Pages > mivo-website > Settings > Variables and Secrets:
+   SUPABASE_URL = https://asdjxmztjlesrbwazczv.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY = the Supabase service_role secret (mark SECRET, never place in GitHub).
+   Optional: ALERT_RATE_SALT = a random secret string.
+3) Redeploy the Cloudflare Pages project. Ensure Functions are deployed and /api/report-error is available.
+4) Supabase Data API must allow mivo_alerts. Admin dashboard must have the alerts section deployed too.
+5) Test a content API error and check the admin Alerts section.
+
+IMPORTANT: Browser telemetry is untrusted and can be triggered by visitors. This endpoint accepts only fixed error codes, never arbitrary messages, and throttles repeated events at edge best-effort. For stronger abuse prevention, configure Cloudflare WAF rate limiting for /api/report-error. Never put Supabase service role key in a public JS file.
+
+The uploaded website ZIP references app.js but does not contain it. We did not recreate or delete that file. Check that app.js already exists in GitHub.
