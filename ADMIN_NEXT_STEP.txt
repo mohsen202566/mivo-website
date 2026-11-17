@@ -1,0 +1,13 @@
+MIVO website integration notes
+
+This package updates the public site first. The admin panel must be updated next.
+Admin must store the selected NFT image URL in mivo_content.image_url and reveal duration in mivo_content.details.reveal_duration_hours (number, default 24).
+Example details: {"rarity":"rare","reveal_mode":"auto","reveal_duration_hours":48}
+Publish content with status="published" and starts_at as ISO UTC timestamp.
+After starts_at, the image displays for the configured duration; after expiry, the mystery box returns (or next scheduled reveal is selected).
+
+IMPORTANT: the browser hides unrevealed images but this is NOT a security boundary. If the Supabase public SELECT policy exposes scheduled rows/image_url, anyone can fetch the URL early. To truly keep images private before reveal, use a private storage bucket and a server-side release endpoint or restrictive DB policies. This is a separate backend/security step, not accomplished by front-end code alone.
+
+Check Supabase public SELECT policies for mivo_content and mivo_settings and ensure site origin can access the REST API. If public reads are denied, content will not appear until RLS is fixed.
+
+The uploaded source ZIP omitted app.js even though index.html referenced it. A minimal replacement is included, but full OpenSea inventory/listing data remains unconnected.
