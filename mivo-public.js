@@ -59,7 +59,7 @@ function applyDrop(d){
     }
     panel.dataset.revealState='revealed';
     $('countdown').textContent='REVEALED';
-    $('dropTitle').textContent=d.title||'Latest Reveal';
+    $('dropTitle').textContent=d.details?.english_title||'Latest Reveal';
     $('dropDesc').textContent=d.details?.english_description||'Discover the latest MIVO collectible.';
     const img=safeUrl(d.image_url);
     if(img){$('mivoRevealedImage').src=img;$('mivoRevealedImage').classList.remove('hide');$('mivoMysteryStage').classList.add('hide');}
@@ -68,6 +68,27 @@ function applyDrop(d){
   }
   tick();
   if(currentDrop)timer=setInterval(tick,1000);
+}
+
+// Revealed NFTs appear in the collection even before minting. Mint status is admin-entered,
+// not a blockchain verification. Never show unpublished or future artwork.
+function renderRevealedCollection(rows){
+ const host=$('mivoManagedGallery');if(!host)return;
+ host.replaceChildren();const now=Date.now();
+ const items=rows.filter(x=>x.kind==='drop'&&Number.isFinite(Date.parse(x.starts_at))&&Date.parse(x.starts_at)<=now&&safeUrl(x.image_url))
+  .sort((a,b)=>Date.parse(b.starts_at)-Date.parse(a.starts_at));
+ for(const d of items){
+  const tier=String(d.details?.rarity||'common').toLowerCase();const rarity=['common','rare','legendary','mythic'].includes(tier)?tier:'common';
+  const card=el('article','mivo-nft-card');card.dataset.tier=rarity;
+  const inner=el('div','mivo-nft-card-inner');const img=el('img');img.src=safeUrl(d.image_url);img.alt='MIVO '+rarity+' NFT';img.loading='lazy';inner.append(img);
+  const start=Date.parse(d.starts_at);if(now-start<86400000){const mark=el('span','mivo-nft-new','NEW');inner.append(mark)}
+  const info=el('div','mivo-nft-card-info');info.append(el('span','mivo-nft-tier',rarity),el('h3','',d.details?.english_title||'MIVO NFT'));
+  const minted=d.details?.mint_status==='minted';info.append(el('p','',minted?'Minted (admin-reported)':'Not minted'));
+  const desc=d.details?.english_description||d.description;if(desc)info.append(el('p','',desc));
+  const link=safeUrl(d.target_url,['opensea.io']);if(link){const a=el('a','pill','VIEW ON OPENSEA ↗');a.href=link;a.target='_blank';a.rel='noopener noreferrer';info.append(a)}
+  inner.append(info);card.append(inner);host.append(card);
+ }
+ if(!items.length)host.append(el('p','muted','Revealed NFTs will appear here after their scheduled reveal.'));
 }
 function renderTextContent(rows,kind,target){const container=$(target);if(!container)return;container.replaceChildren();const items=rows.filter(x=>x.kind===kind&&(!x.starts_at||new Date(x.starts_at)<=new Date())&&(!x.ends_at||new Date(x.ends_at)>new Date())).slice(0,6);
 if(!items.length){if(kind==='promotion'){const empty=el('div','empty','No active promotions have been published.');container.append(empty)}return}
@@ -89,6 +110,7 @@ async function load(){
      renderTextContent(rows,'promotion','offersBody');
      renderTextContent(rows,'announcement','announcementsBody');
      renderRoadmap(rows);
+     renderRevealedCollection(rows);
      const count=rows.filter(x=>x.kind==='promotion').length;
      if($('offersCount'))$('offersCount').textContent=String(count);
    }catch(e){console.warn('MIVO render:',e);report('render')}
