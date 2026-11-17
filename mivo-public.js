@@ -9,21 +9,60 @@ async function query(table,params){const r=await fetch(API+table+'?'+params,{hea
 const englishDate=d=>new Intl.DateTimeFormat('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'Asia/Tehran'}).format(d);
 const englishTime=d=>new Intl.DateTimeFormat('en-US',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Tehran'}).format(d);
 let currentDrop=null, timer=null;
-function resetDrop(){const p=$('mivoRevealPanel');if(!p)return;p.dataset.revealState='idle';$('dropTitle').textContent='Mystery Drop';$('dropDesc').textContent='Stay tuned for the next MIVO reveal.';$('mivoRevealDate').textContent='—';$('mivoRevealTime').textContent='—';$('countdown').textContent='—';$('mivoRevealRarity').classList.add('hide');$('mivoRevealLink').classList.add('hide');$('mivoRevealedImage').classList.add('hide');$('mivoMysteryStage').classList.remove('hide');clearInterval(timer)}
-function applyDrop(d){resetDrop();if(!d)return;currentDrop=d;const p=$('mivoRevealPanel'),start=new Date(d.starts_at);if(!Number.isFinite(start.getTime()))return;
-const rarity=(d.details?.rarity||'hidden').toLowerCase();if(['common','rare','legendary','mythic'].includes(rarity)){$('mivoRevealRarity').textContent=rarity.toUpperCase();$('mivoRevealRarity').classList.remove('hide')}
-$('mivoRevealDate').textContent=englishDate(start);$('mivoRevealTime').textContent=englishTime(start);
-$('dropDesc').textContent='The next MIVO reveal is approaching.';
-function tick(){const ms=start.getTime()-Date.now();if(ms>0){p.dataset.revealState='scheduled';const sec=Math.floor(ms/1000);const days=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60),s=sec%60;$('countdown').textContent=`${days}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;return}
-clearInterval(timer);p.dataset.revealState='revealed';$('countdown').textContent='REVEALED';$('dropTitle').textContent='Latest Reveal';$('dropDesc').textContent='Discover the latest MIVO collectible.';
-const img=safeUrl(d.image_url);if(img){$('mivoRevealedImage').src=img;$('mivoRevealedImage').classList.remove('hide');$('mivoMysteryStage').classList.add('hide')}
-const link=safeUrl(d.target_url,['opensea.io']);if(link){$('mivoRevealLink').href=link;$('mivoRevealLink').classList.remove('hide')}
-}tick();if(start>Date.now())timer=setInterval(tick,1000)}
+function resetDrop(){currentDrop=null;const p=$('mivoRevealPanel');if(!p)return;p.dataset.revealState='idle';$('dropTitle').textContent='Mystery Drop';$('dropDesc').textContent='Stay tuned for the next MIVO reveal.';$('mivoRevealDate').textContent='—';$('mivoRevealTime').textContent='—';$('countdown').textContent='—';$('mivoRevealRarity').classList.add('hide');$('mivoRevealLink').classList.add('hide');$('mivoRevealedImage').classList.add('hide');$('mivoMysteryStage').classList.remove('hide');clearInterval(timer)}
+// The admin stores reveal duration in details.reveal_duration_hours (default: 24).
+// An expired reveal is never displayed as the current Coming Soon feature.
+const durationMs=d=>{
+  const raw=Number(d.details?.reveal_duration_hours ?? d.details?.display_hours ?? 24);
+  return (Number.isFinite(raw)&&raw>0?Math.min(raw,8760):24)*3600000;
+};
+function chooseDrop(drops,now){
+  const valid=drops.filter(d=>Number.isFinite(Date.parse(d.starts_at)));
+  const upcoming=valid.filter(d=>Date.parse(d.starts_at)>now).sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at))[0];
+  const active=valid.filter(d=>Date.parse(d.starts_at)<=now&&now<Date.parse(d.starts_at)+durationMs(d))
+    .sort((a,b)=>Date.parse(b.starts_at)-Date.parse(a.starts_at))[0];
+  return active||upcoming||null;
+}
+function applyDrop(d){
+  clearInterval(timer);
+  resetDrop();
+  if(!d)return;
+  currentDrop=d;
+  const panel=$('mivoRevealPanel'),start=Date.parse(d.starts_at);
+  const end=start+durationMs(d);
+  const rarity=String(d.details?.rarity||'hidden').toLowerCase();
+  if(['common','rare','legendary','mythic'].includes(rarity)){
+    const tag=$('mivoRevealRarity');tag.textContent=rarity.toUpperCase();tag.className='mivo-rarity '+rarity;
+  }
+  $('mivoRevealDate').textContent=englishDate(new Date(start));
+  $('mivoRevealTime').textContent=englishTime(new Date(start));
+  $('dropDesc').textContent='The next MIVO reveal is approaching.';
+  function tick(){
+    const now=Date.now(),left=start-now;
+    if(now>=end){clearInterval(timer);currentDrop=null;load();return;}
+    if(left>0){
+      panel.dataset.revealState='scheduled';
+      const sec=Math.ceil(left/1000),days=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60),ss=sec%60;
+      $('countdown').textContent=`${days}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(ss).padStart(2,'0')}s`;
+      return;
+    }
+    panel.dataset.revealState='revealed';
+    $('countdown').textContent='REVEALED';
+    $('dropTitle').textContent=d.title||'Latest Reveal';
+    $('dropDesc').textContent=d.details?.english_description||'Discover the latest MIVO collectible.';
+    const img=safeUrl(d.image_url);
+    if(img){$('mivoRevealedImage').src=img;$('mivoRevealedImage').classList.remove('hide');$('mivoMysteryStage').classList.add('hide');}
+    const link=safeUrl(d.target_url,['opensea.io']);
+    if(link){$('mivoRevealLink').href=link;$('mivoRevealLink').classList.remove('hide');}
+  }
+  tick();
+  if(currentDrop)timer=setInterval(tick,1000);
+}
 function renderTextContent(rows,kind,target){const container=$(target);if(!container)return;container.replaceChildren();const items=rows.filter(x=>x.kind===kind&&(!x.starts_at||new Date(x.starts_at)<=new Date())&&(!x.ends_at||new Date(x.ends_at)>new Date())).slice(0,6);
 if(!items.length){if(kind==='promotion'){const empty=el('div','empty','No active promotions have been published.');container.append(empty)}return}
 for(const item of items){const card=el('article','mivo-managed-card');card.append(el('h4','',item.details?.english_title||item.title));const desc=item.details?.english_description||item.description;if(desc)card.append(el('p','muted',desc));const url=safeUrl(item.target_url);if(url){const a=el('a','pill','VIEW DETAILS ↗');a.href=url;a.target='_blank';a.rel='noopener noreferrer';card.append(a)}container.append(card)}}
 function renderRoadmap(rows){const items=rows.filter(x=>x.kind==='roadmap').sort((a,b)=>a.sort_order-b.sort_order);if(!items.length)return;const root=$('roadmapCards');if(!root)return;root.replaceChildren();for(const item of items){const card=el('article','panel');card.append(el('h3','',item.details?.english_title||item.title));card.append(el('p','muted',item.details?.english_description||item.description));root.append(card)}}
 function renderLinks(rows){const setting=rows.find(x=>x.key==='official_links')?.value||{};const links=[['telegram','Telegram','t.me'],['twitter','X (Twitter)','x.com'],['instagram','Instagram','instagram.com'],['opensea','OpenSea','opensea.io']];const root=$('officialLinks');if(!root)return;root.replaceChildren();for(const [key,name,host] of links){const u=safeUrl(setting[key],[host]);if(!u)continue;const a=el('a','pill',name+' ↗');a.href=u;a.target='_blank';a.rel='noopener noreferrer';root.append(a)}if(!root.children.length)root.append(el('span','status','Official links will appear once configured.'));let footer=document.getElementById('mivoFooterSocial');if(!footer){footer=el('div','mivo-footer-social');footer.id='mivoFooterSocial';document.querySelector('footer')?.append(footer)}footer.replaceChildren();for(const a of root.querySelectorAll('a'))footer.append(a.cloneNode(true))}
-async function load(){try{const [rows,settings]=await Promise.all([query('mivo_content','select=*&status=eq.published&order=sort_order.asc,created_at.desc'),query('mivo_settings','select=key,value&is_public=eq.true')]);const drops=rows.filter(x=>x.kind==='drop'&&x.starts_at).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));const upcoming=drops.find(x=>new Date(x.starts_at)>Date.now());const latest=drops.filter(x=>new Date(x.starts_at)<=Date.now()).sort((a,b)=>new Date(b.starts_at)-new Date(a.starts_at))[0];applyDrop(upcoming||latest||null);renderTextContent(rows,'promotion','offersBody');renderTextContent(rows,'announcement','announcementsBody');renderRoadmap(rows);renderLinks(settings);const count=rows.filter(x=>x.kind==='promotion').length;if($('offersCount'))$('offersCount').textContent=String(count)}catch(e){console.warn('MIVO content sync:',e.message);if(!currentDrop)resetDrop()}}
-window.addEventListener('DOMContentLoaded',()=>{resetDrop();load();setInterval(load,60000)});
+async function load(){try{const [rows,settings]=await Promise.all([query('mivo_content','select=*&status=eq.published&order=sort_order.asc,created_at.desc'),query('mivo_settings','select=key,value&is_public=eq.true')]);const drops=rows.filter(x=>x.kind==='drop'&&x.starts_at);const chosen=chooseDrop(drops,Date.now());if(chosen?.id!==currentDrop?.id)applyDrop(chosen);else if(!chosen&&currentDrop)resetDrop();renderTextContent(rows,'promotion','offersBody');renderTextContent(rows,'announcement','announcementsBody');renderRoadmap(rows);renderLinks(settings);const count=rows.filter(x=>x.kind==='promotion').length;if($('offersCount'))$('offersCount').textContent=String(count)}catch(e){console.warn('MIVO content sync:',e.message);if(!currentDrop)resetDrop()}}
+window.addEventListener('DOMContentLoaded',()=>{resetDrop();load();setInterval(load,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()})});
 })();
