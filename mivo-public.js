@@ -3,9 +3,20 @@
 const API='https://asdjxmztjlesrbwazczv.supabase.co/rest/v1/';
 const KEY='sb_publishable_sT9ibl-gFG3Fcv98zDliRA_4n_lsYMx';
 const $=id=>document.getElementById(id);
+const reported=new Map();
+function report(code){
+  const now=Date.now();if(now-(reported.get(code)||0)<3600000)return;
+  reported.set(code,now);
+  try{fetch('/api/report-error',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,page:location.pathname}),keepalive:true}).catch(()=>{});}catch{}
+}
+window.addEventListener('error',e=>{if(e.target&&e.target!==window){if(e.target.tagName==='IMG')report('image');return;}report('runtime')},true);
+window.addEventListener('unhandledrejection',()=>report('runtime'));
 const safeUrl=(value,allowed)=>{try{const u=new URL(value);return u.protocol==='https:'&&(!allowed||allowed.some(h=>u.hostname===h||u.hostname.endsWith('.'+h)))?u.href:null}catch{return null}};
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
-async function query(table,params){const r=await fetch(API+table+'?'+params,{headers:{apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json'}});if(!r.ok)throw new Error('Content service '+r.status);return r.json()}
+async function query(table,params){
+ try{const r=await fetch(API+table+'?'+params,{headers:{apikey:KEY,Authorization:'Bearer '+KEY,Accept:'application/json'}});if(!r.ok)throw new Error('Content service '+r.status);return await r.json()}
+ catch(e){report(table==='mivo_settings'?'settings_fetch':'content_fetch');throw e}
+}
 const englishDate=d=>new Intl.DateTimeFormat('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'Asia/Tehran'}).format(d);
 const englishTime=d=>new Intl.DateTimeFormat('en-US',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Tehran'}).format(d);
 let currentDrop=null, timer=null;
@@ -63,6 +74,28 @@ if(!items.length){if(kind==='promotion'){const empty=el('div','empty','No active
 for(const item of items){const card=el('article','mivo-managed-card');card.append(el('h4','',item.details?.english_title||item.title));const desc=item.details?.english_description||item.description;if(desc)card.append(el('p','muted',desc));const url=safeUrl(item.target_url);if(url){const a=el('a','pill','VIEW DETAILS ↗');a.href=url;a.target='_blank';a.rel='noopener noreferrer';card.append(a)}container.append(card)}}
 function renderRoadmap(rows){const items=rows.filter(x=>x.kind==='roadmap').sort((a,b)=>a.sort_order-b.sort_order);if(!items.length)return;const root=$('roadmapCards');if(!root)return;root.replaceChildren();for(const item of items){const card=el('article','panel');card.append(el('h3','',item.details?.english_title||item.title));card.append(el('p','muted',item.details?.english_description||item.description));root.append(card)}}
 function renderLinks(rows){const setting=rows.find(x=>x.key==='official_links')?.value||{};const links=[['telegram','Telegram','t.me'],['twitter','X (Twitter)','x.com'],['instagram','Instagram','instagram.com'],['opensea','OpenSea','opensea.io']];const root=$('officialLinks');if(!root)return;root.replaceChildren();for(const [key,name,host] of links){const u=safeUrl(setting[key],[host]);if(!u)continue;const a=el('a','pill',name+' ↗');a.href=u;a.target='_blank';a.rel='noopener noreferrer';root.append(a)}if(!root.children.length)root.append(el('span','status','Official links will appear once configured.'));let footer=document.getElementById('mivoFooterSocial');if(!footer){footer=el('div','mivo-footer-social');footer.id='mivoFooterSocial';document.querySelector('footer')?.append(footer)}footer.replaceChildren();for(const a of root.querySelectorAll('a'))footer.append(a.cloneNode(true))}
-async function load(){try{const [rows,settings]=await Promise.all([query('mivo_content','select=*&status=eq.published&order=sort_order.asc,created_at.desc'),query('mivo_settings','select=key,value&is_public=eq.true')]);const drops=rows.filter(x=>x.kind==='drop'&&x.starts_at);const chosen=chooseDrop(drops,Date.now());if(chosen?.id!==currentDrop?.id)applyDrop(chosen);else if(!chosen&&currentDrop)resetDrop();renderTextContent(rows,'promotion','offersBody');renderTextContent(rows,'announcement','announcementsBody');renderRoadmap(rows);renderLinks(settings);const count=rows.filter(x=>x.kind==='promotion').length;if($('offersCount'))$('offersCount').textContent=String(count)}catch(e){console.warn('MIVO content sync:',e.message);if(!currentDrop)resetDrop()}}
+async function load(){
+ const results=await Promise.allSettled([
+   query('mivo_content','select=*&status=eq.published&order=sort_order.asc,created_at.desc'),
+   query('mivo_settings','select=key,value&is_public=eq.true')
+ ]);
+ if(results[0].status==='fulfilled'){
+   try{
+     const rows=results[0].value;
+     const drops=rows.filter(x=>x.kind==='drop'&&x.starts_at);
+     const chosen=chooseDrop(drops,Date.now());
+     if(chosen?.id!==currentDrop?.id)applyDrop(chosen);
+     else if(!chosen&&currentDrop)resetDrop();
+     renderTextContent(rows,'promotion','offersBody');
+     renderTextContent(rows,'announcement','announcementsBody');
+     renderRoadmap(rows);
+     const count=rows.filter(x=>x.kind==='promotion').length;
+     if($('offersCount'))$('offersCount').textContent=String(count);
+   }catch(e){console.warn('MIVO render:',e);report('render')}
+ }else console.warn('MIVO content sync:',results[0].reason);
+ if(results[1].status==='fulfilled'){
+   try{renderLinks(results[1].value)}catch(e){console.warn('MIVO settings render:',e);report('render')}
+ }else console.warn('MIVO settings sync:',results[1].reason);
+}
 window.addEventListener('DOMContentLoaded',()=>{resetDrop();load();setInterval(load,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()})});
 })();
