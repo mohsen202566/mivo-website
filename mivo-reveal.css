@@ -1,1 +1,184 @@
+/* MIVO mystery reveal — additive styles, no changes to cinematic hero. */
+.mivo-reveal-panel{position:relative;isolation:isolate;overflow:hidden;transition:border-color .6s,box-shadow .6s}
+.mivo-reveal-panel::before{content:"";position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;opacity:0;background:conic-gradient(from 0deg,transparent 0%,#b65aff 12%,transparent 24%,#6621b8 42%,transparent 57%,#dfabff 78%,transparent 92%);z-index:-2;animation:mivo-border-orbit 9s linear infinite;transition:opacity .6s}
+.mivo-reveal-panel::after{content:"";position:absolute;inset:2px;border-radius:21px;pointer-events:none;background:linear-gradient(145deg,#1b122a,#0f0b19);z-index:-1}
+.mivo-reveal-panel[data-reveal-state="scheduled"]{border-color:#9950d0;box-shadow:0 0 25px #a043ff45,0 0 65px #8225d025}
+.mivo-reveal-panel[data-reveal-state="scheduled"]::before{opacity:1}
+.mivo-reveal-art{height:260px;display:grid;place-items:center;position:relative;perspective:850px;border-radius:18px;background:radial-gradient(ellipse at center,#261735,#100a1a 72%);overflow:hidden;margin-bottom:15px}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-reveal-art{background:radial-gradient(ellipse at center,#542177,#120a20 75%)}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-reveal-art::before{content:"";position:absolute;inset:12%;background:radial-gradient(ellipse,#b456ff70,transparent 65%);filter:blur(28px);animation:mivo-pulse 3.8s ease-in-out infinite alternate}
+.mivo-mystery-stage{height:150px;width:150px;display:grid;place-items:center;transform-style:preserve-3d;animation:mivo-float 4.5s ease-in-out infinite alternate}
+.mivo-mystery-cube{position:relative;width:116px;height:116px;transform-style:preserve-3d;animation:mivo-cube-spin 14s linear infinite}
+.mivo-cube-face{position:absolute;inset:0;display:grid;place-items:center;font-size:66px;font-weight:900;color:#e5cbf7;background:linear-gradient(145deg,#5b3876,#24172f);border:2px solid #7b5c94;backface-visibility:visible}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-cube-face{border-color:#d194ff;color:#fff;box-shadow:inset 0 0 25px #b765ff55,0 0 12px #ad53ff55;text-shadow:0 0 12px #bc72ff}
+.mivo-cube-front{transform:translateZ(58px)}.mivo-cube-back{transform:rotateY(180deg) translateZ(58px)}.mivo-cube-left{transform:rotateY(-90deg) translateZ(58px)}.mivo-cube-right{transform:rotateY(90deg) translateZ(58px)}.mivo-cube-top{transform:rotateX(90deg) translateZ(58px)}.mivo-cube-bottom{transform:rotateX(-90deg) translateZ(58px)}
+.mivo-reveal-meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin:10px 0}.mivo-reveal-date{font-size:12px;color:#b9a9c8}.mivo-reveal-date strong{color:#f0ddff}.mivo-rarity{border:1px solid currentColor;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:800;letter-spacing:.13em}.mivo-rarity.common{color:#9ca3af}.mivo-rarity.rare{color:#39bafa}.mivo-rarity.legendary{color:#efbf58}.mivo-rarity.mythic{color:#bf79ff}
+.mivo-revealed-image{max-height:100%;max-width:100%;object-fit:contain;border-radius:12px;animation:mivo-reveal-in .8s ease-out both}.mivo-reveal-panel .countdown{font-size:clamp(20px,4vw,31px);min-height:42px}
+@keyframes mivo-cube-spin{from{transform:rotateX(-12deg) rotateY(0)}to{transform:rotateX(-12deg) rotateY(360deg)}}@keyframes mivo-float{to{transform:translateY(-12px)}}@keyframes mivo-pulse{to{opacity:.45;transform:scale(1.15)}}@keyframes mivo-border-orbit{to{filter:hue-rotate(360deg)}}@keyframes mivo-reveal-in{from{opacity:0;transform:scale(.8);filter:brightness(2)}to{opacity:1;transform:scale(1);filter:brightness(1)}}
+@media(prefers-reduced-motion:reduce){.mivo-mystery-stage,.mivo-mystery-cube,.mivo-reveal-panel::before,.mivo-reveal-art::before,.mivo-revealed-image{animation:none!important}}
+/* Dynamic content and social links */
+.mivo-managed-card{padding:13px 0;border-bottom:1px solid #ffffff19}.mivo-managed-card h4{margin:0 0 7px}.mivo-managed-card p{margin:0 0 9px}.mivo-footer-social{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
 
+
+/* ==========================================================
+   MIVO — AURORA INFERNO / cinematic scheduled reveal upgrade
+   Works with existing markup; no JS or HTML edits required.
+   ========================================================== */
+@property --mivo-fire-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes mivo-fire-wheel {to {--mivo-fire-angle:360deg}}
+@keyframes mivo-fire-fallback {to {transform:rotate(360deg)}}
+@keyframes mivo-fire-breathe {0%,100%{opacity:.72;filter:brightness(1)}50%{opacity:1;filter:brightness(1.55)}}
+@keyframes mivo-fire-rise {0%{transform:translate3d(0,18px,0) scale(.87);opacity:.45}45%{opacity:1}100%{transform:translate3d(0,-25px,0) scale(1.12);opacity:.3}}
+@keyframes mivo-fire-sparks {0%{background-position:0% 0%,0% 0%,0% 0%;opacity:.6}50%{opacity:1}100%{background-position:24% -90%, -24% -65%, 12% -105%;opacity:.6}}
+@keyframes mivo-fire-cube {0%,100%{filter:drop-shadow(0 0 10px #b52bff) drop-shadow(0 0 24px #25cfff)}50%{filter:drop-shadow(0 0 18px #20e8ff) drop-shadow(0 0 36px #b52bff)}}
+@keyframes mivo-fire-orbit {to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes mivo-fire-orbit-reverse {to{transform:translate(-50%,-50%) rotate(-360deg)}}
+
+/* Scheduled state: luminous rotating multicolour perimeter. */
+.mivo-reveal-panel[data-reveal-state="scheduled"]{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  border:2px solid #a63bff;
+  box-shadow:
+    0 0 0 1px #e5a4ffb0,
+    0 0 14px #e13aff,
+    0 0 32px #993bffb8,
+    0 0 65px #227bff7a,
+    inset 0 0 22px #9435ff35;
+}
+.mivo-reveal-panel[data-reveal-state="scheduled"]::before{
+  content:"";
+  position:absolute;
+  inset:-5px;
+  z-index:0;
+  border-radius:inherit;
+  opacity:1;
+  pointer-events:none;
+  background:conic-gradient(from var(--mivo-fire-angle),
+    #2bfaff 0deg,#2056ff 38deg,#a22dff 80deg,
+    #ff4dde 115deg,#fcadff 137deg,#4a2aff 170deg,
+    #00e9ff 207deg,#9644ff 246deg,#ff57e4 287deg,
+    #21eaff 323deg,#2bfaff 360deg);
+  padding:5px;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  animation:mivo-fire-wheel 3.2s linear infinite,mivo-fire-breathe 2.1s ease-in-out infinite;
+}
+.mivo-reveal-panel[data-reveal-state="scheduled"]::after{
+  content:"";
+  position:absolute;
+  inset:5px;
+  z-index:-1;
+  border-radius:inherit;
+  pointer-events:none;
+  background:linear-gradient(155deg,#1b0d2d,#0b0718 65%,#150925);
+}
+
+/* High-energy stage: layered cyan-blue flame, violet plasma and sparks. */
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-reveal-art{
+  isolation:isolate;
+  overflow:hidden;
+  min-height:300px;
+  background:
+    radial-gradient(ellipse 38% 58% at 50% 64%,#1c9dff7d 0%,#5120bf68 48%,transparent 95%),
+    radial-gradient(ellipse 60% 66% at 50% 78%,#6515f7a8 0%,transparent 76%),
+    radial-gradient(ellipse at center,#130c35 0%,#080719 78%);
+  box-shadow:inset 0 0 30px #9e36ff3b,inset 0 0 60px #147aff36;
+}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-reveal-art::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  inset:-25%;
+  pointer-events:none;
+  opacity:1;
+  filter:blur(8px) saturate(1.7);
+  background:
+    conic-gradient(from var(--mivo-fire-angle) at 50% 58%,
+      transparent 0deg,#5c1bff00 35deg,#8325ffbf 65deg,
+      #17dfffde 82deg,transparent 104deg,transparent 155deg,
+      #982affc2 193deg,#168dffdb 217deg,transparent 238deg,
+      #ff44e18a 282deg,transparent 310deg),
+    radial-gradient(ellipse 32% 53% at 36% 70%,#00bfff91,transparent 80%),
+    radial-gradient(ellipse 36% 62% at 65% 69%,#a83affc4,transparent 80%);
+  animation:mivo-fire-wheel 4.8s linear infinite,mivo-fire-breathe 2.4s ease-in-out infinite;
+}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-reveal-art::after{
+  content:"";
+  position:absolute;
+  z-index:1;
+  inset:5%;
+  pointer-events:none;
+  background-image:
+    radial-gradient(circle,#e9ffff 0 2px,transparent 4px),
+    radial-gradient(circle,#27eaff 0 2px,transparent 5px),
+    radial-gradient(circle,#f276ff 0 2px,transparent 5px);
+  background-size:71px 83px,97px 107px,113px 93px;
+  background-position:7px 20px,29px 16px,43px 31px;
+  opacity:.85;
+  filter:drop-shadow(0 0 6px #36dfff);
+  animation:mivo-fire-sparks 5s linear infinite;
+}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage{
+  position:relative;
+  z-index:3;
+  transform-style:preserve-3d;
+  filter:drop-shadow(0 0 16px #9b2aff) drop-shadow(0 0 26px #00cfff);
+  animation:mivo-float 3.5s ease-in-out infinite alternate,mivo-fire-cube 2.5s ease-in-out infinite;
+}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage::before,
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage::after{
+  content:"";
+  position:absolute;
+  left:50%;top:50%;
+  width:260px;height:95px;
+  border-radius:50%;
+  pointer-events:none;
+  border:3px solid #29eaff;
+  box-shadow:0 0 9px #dffaff,0 0 19px #00d9ff,0 0 37px #7437ff;
+  transform:translate(-50%,-50%) rotate(-22deg);
+  animation:mivo-fire-orbit 7s linear infinite;
+}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage::after{
+  width:245px;height:110px;
+  border-color:#ed59ff;
+  box-shadow:0 0 10px #ff8bff,0 0 25px #a12bff;
+  transform:translate(-50%,-50%) rotate(28deg);
+  animation:mivo-fire-orbit-reverse 9s linear infinite;
+}
+.mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-cube-face{
+  background:linear-gradient(135deg,#31106c,#0c123b 45%,#2a0e5c);
+  color:#fff;
+  border:2px solid #89f2ff;
+  text-shadow:0 0 8px #fff,0 0 18px #45ddff,0 0 30px #d44aff;
+  box-shadow:inset 0 0 23px #8b2bff9c,inset 0 0 45px #126eff45,
+             0 0 8px #d7faff,0 0 20px #4ecbff,0 0 38px #a53aff;
+}
+
+/* Revealed NFT: no artificial fire overlay over the artwork. */
+.mivo-reveal-panel[data-reveal-state="revealed"] .mivo-reveal-art::before,
+.mivo-reveal-panel[data-reveal-state="revealed"] .mivo-reveal-art::after{
+  display:none;
+}
+@media(max-width:480px){
+  .mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-reveal-art{min-height:285px}
+  .mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage::before{width:225px;height:82px}
+  .mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage::after{width:210px;height:92px}
+}
+@media(prefers-reduced-motion:reduce){
+  .mivo-reveal-panel[data-reveal-state="scheduled"]::before,
+  .mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-reveal-art::before,
+  .mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-reveal-art::after,
+  .mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage,
+  .mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage::before,
+  .mivo-reveal-panel[data-reveal-state="scheduled"] .mivo-mystery-stage::after{
+    animation:none!important;
+  }
+}
