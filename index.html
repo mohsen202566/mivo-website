@@ -36,66 +36,29 @@
 <footer class="footer"><div class="logo">MIVO</div><p>BEHIND EVERY SMILE, A SECRET.</p><small>Polygon collection · Marketplace prices and availability are provided by OpenSea when connected.</small></footer>
 <dialog class="modal" id="nftModal"><button class="close" id="modalClose" aria-label="Close">✕</button><div class="modal-body"><img id="modalImg" alt="NFT artwork"><div><div class="eyebrow" id="modalTier"></div><h2 id="modalTitle"></h2><p class="muted" id="modalDescription"></p><p id="modalPrice"></p><p class="status" id="modalStatus"></p><div class="traits" id="modalTraits"></div><p><a class="cta" id="modalLink" href="#" target="_blank" rel="noopener noreferrer">VIEW ON OPENSEA ↗</a></p></div></div></dialog>
 <script src="app.js" defer></script><script src="mivo-public.js" defer></script><script>
-/* MIVO persistent silent video playback for mobile browsers. */
+/* MIVO: native infinite loop with a minimal mobile fallback. */
 (() => {
   const video = document.querySelector('.mivo-fire-video');
-  const stage = document.getElementById('mivoMysteryStage');
-  if (!video || !stage) return;
+  if (!video) return;
   video.muted = true;
   video.defaultMuted = true;
-  video.volume = 0;
-  video.autoplay = true;
   video.loop = true;
+  video.autoplay = true;
   video.playsInline = true;
   video.setAttribute('muted', '');
   video.setAttribute('loop', '');
   video.setAttribute('playsinline', '');
-  video.setAttribute('webkit-playsinline', '');
-
-  let lastTime = -1;
-  let stuckChecks = 0;
-  let restarting = false;
-  const active = () => !document.hidden && stage.getClientRects().length > 0 && getComputedStyle(stage).visibility !== 'hidden';
-  const play = () => {
-    if (!active()) return;
-    const result = video.play();
-    if (result && typeof result.catch === 'function') result.catch(() => {});
+  const start = () => {
+    if (document.hidden || !video.isConnected) return;
+    const promise = video.play();
+    if (promise && typeof promise.catch === 'function') promise.catch(() => {});
   };
-  const rewind = () => {
-    if (restarting || !active()) return;
-    restarting = true;
-    try { video.currentTime = 0.05; } catch (_) {}
-    play();
-    setTimeout(() => { restarting = false; }, 250);
-  };
-  // Restart just before the end, rather than waiting for an 'ended' event.
-  video.addEventListener('timeupdate', () => {
-    if (Number.isFinite(video.duration) && video.duration > 0 && video.currentTime >= video.duration - 0.10) rewind();
+  video.addEventListener('ended', () => {
+    video.currentTime = 0;
+    start();
   });
-  video.addEventListener('ended', rewind);
-  video.addEventListener('pause', () => { if (active()) play(); });
-  video.addEventListener('loadedmetadata', play);
-  video.addEventListener('canplay', play);
-  document.addEventListener('visibilitychange', () => { if (active()) play(); });
-  window.addEventListener('pageshow', play);
-  // Watchdog for devices that freeze playback without firing 'ended'.
-  setInterval(() => {
-    if (!active() || video.readyState < 2) return;
-    const t = video.currentTime;
-    if (Number.isFinite(video.duration) && video.duration > 0 && t >= video.duration - 0.10) {
-      rewind();
-    } else if (Math.abs(t - lastTime) < 0.015) {
-      stuckChecks++;
-      if (stuckChecks >= 3) {
-        if (video.paused || video.ended) play();
-        else { try { video.currentTime = Math.min(t + 0.05, video.duration - 0.2); } catch (_) {} play(); }
-        stuckChecks = 0;
-      }
-    } else {
-      stuckChecks = 0;
-    }
-    lastTime = video.currentTime;
-  }, 700);
-  play();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) start(); });
+  window.addEventListener('pageshow', start);
+  start();
 })();
 </script></body></html>
