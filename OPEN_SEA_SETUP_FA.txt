@@ -1,0 +1,17 @@
+MIVO WEBSITE — OpenSea integration
+
+1) This archive is a COMPLETE replacement of the mivo-website GitHub repository, not the admin repository.
+2) Preserve the folder structure, including functions/api/mivo-market.js.
+3) Cloudflare Pages > Settings > Variables and Secrets > Production:
+   Type: Secret
+   Name: OPENSEA_API_KEY
+   Value: Your own OpenSea API key (never paste into GitHub).
+4) Redeploy the site after adding the secret, if necessary.
+5) Test https://mivo-website.pages.dev/api/mivo-market — it should return JSON with items, not a 404/503.
+6) NFT list uses OpenSea contract NFT endpoint, paginated 50 per page. Use LOAD MORE NFTS for additional pages.
+7) Edge cache is 1 hour, updated on request; browser refreshes each hour while open. This is NOT a background cron job.
+8) NFT NEW is shown for 48h only if OpenSea exposes a verified mint timestamp in NFT data or recent mint events. If no reliable timestamp is available, NEW is omitted rather than showing an incorrect timestamp.
+9) For sale values are best-effort, only for orders with identifiable token IDs returned by the OpenSea collection listings endpoint. Missing values show Listing not verified. Auctions are intentionally unknown, not invented.
+10) Existing admin reveal remains in Supabase. Once reveal time passes, its image stays in Coming Soon until a newer reveal replaces it; it does NOT create a gallery card until minted.
+11) There is no app.js in this repository; its broken script reference has been removed. The new mivo-market.js provides live gallery rendering.
+12) The Cloudflare Pages Function only runs when deployed to Pages, not when index.html is opened locally.
