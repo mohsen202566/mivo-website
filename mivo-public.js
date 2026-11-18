@@ -20,7 +20,7 @@ async function query(table,params){
 const englishDate=d=>new Intl.DateTimeFormat('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'Asia/Tehran'}).format(d);
 const englishTime=d=>new Intl.DateTimeFormat('en-US',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Tehran'}).format(d);
 let currentDrop=null, timer=null;
-function resetDrop(){currentDrop=null;const p=$('mivoRevealPanel');if(!p)return;p.dataset.revealState='idle';$('dropTitle').textContent='Mystery Drop';$('dropDesc').textContent='Stay tuned for the next MIVO reveal.';$('mivoRevealDate').textContent='—';$('mivoRevealTime').textContent='—';$('countdown').textContent='—';$('mivoRevealRarity').classList.add('hide');$('mivoRevealLink').classList.add('hide');$('mivoRevealedImage').classList.add('hide');$('mivoMysteryStage').classList.remove('hide');clearInterval(timer)}
+function resetDrop(){currentDrop=null;const p=$('mivoRevealPanel');if(!p)return;p.dataset.revealState='idle';$('dropTitle').textContent='Mystery Drop';$('dropDesc').textContent='Stay tuned for the next MIVO reveal.';$('mivoRevealDate').textContent='—';$('mivoRevealTime').textContent='—';$('countdown').textContent='—';$('mivoRevealRarity').classList.add('hide');$('mivoRevealLink').classList.add('hide');$('mivoRevealedImage').classList.add('hide');$('mivoMysteryStage').classList.remove('hide');$('mivoComingHeading')?.classList.add('mivo-inactive');clearInterval(timer)}
 // The admin stores reveal duration in details.reveal_duration_hours (default: 24).
 // An expired reveal is never displayed as the current Coming Soon feature.
 const durationMs=d=>{
@@ -30,7 +30,7 @@ const durationMs=d=>{
 function chooseDrop(drops,now){
   const valid=drops.filter(d=>Number.isFinite(Date.parse(d.starts_at)));
   const upcoming=valid.filter(d=>Date.parse(d.starts_at)>now).sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at))[0];
-  const active=valid.filter(d=>Date.parse(d.starts_at)<=now&&now<Date.parse(d.starts_at)+durationMs(d))
+  const active=valid.filter(d=>Date.parse(d.starts_at)<=now)
     .sort((a,b)=>Date.parse(b.starts_at)-Date.parse(a.starts_at))[0];
   return active||upcoming||null;
 }
@@ -38,7 +38,7 @@ function applyDrop(d){
   clearInterval(timer);
   resetDrop();
   if(!d)return;
-  currentDrop=d;
+  currentDrop=d;$('mivoComingHeading')?.classList.remove('mivo-inactive');
   const panel=$('mivoRevealPanel'),start=Date.parse(d.starts_at);
   const end=start+durationMs(d);
   const rarity=String(d.details?.rarity||'hidden').toLowerCase();
@@ -50,7 +50,7 @@ function applyDrop(d){
   $('dropDesc').textContent='The next MIVO reveal is approaching.';
   function tick(){
     const now=Date.now(),left=start-now;
-    if(now>=end){clearInterval(timer);currentDrop=null;load();return;}
+    
     if(left>0){
       panel.dataset.revealState='scheduled';
       const sec=Math.ceil(left/1000),days=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60),ss=sec%60;
@@ -72,24 +72,6 @@ function applyDrop(d){
 
 // Revealed NFTs appear in the collection even before minting. Mint status is admin-entered,
 // not a blockchain verification. Never show unpublished or future artwork.
-function renderRevealedCollection(rows){
- const host=$('mivoManagedGallery');if(!host)return;
- host.replaceChildren();const now=Date.now();
- const items=rows.filter(x=>x.kind==='drop'&&Number.isFinite(Date.parse(x.starts_at))&&Date.parse(x.starts_at)<=now&&safeUrl(x.image_url))
-  .sort((a,b)=>Date.parse(b.starts_at)-Date.parse(a.starts_at));
- for(const d of items){
-  const tier=String(d.details?.rarity||'common').toLowerCase();const rarity=['common','rare','legendary','mythic'].includes(tier)?tier:'common';
-  const card=el('article','mivo-nft-card');card.dataset.tier=rarity;
-  const inner=el('div','mivo-nft-card-inner');const img=el('img');img.src=safeUrl(d.image_url);img.alt='MIVO '+rarity+' NFT';img.loading='lazy';inner.append(img);
-  const start=Date.parse(d.starts_at);if(now-start<86400000){const mark=el('span','mivo-nft-new','NEW');inner.append(mark)}
-  const info=el('div','mivo-nft-card-info');info.append(el('span','mivo-nft-tier',rarity),el('h3','',d.details?.english_title||'MIVO NFT'));
-  const minted=d.details?.mint_status==='minted';info.append(el('p','',minted?'Minted (admin-reported)':'Not minted'));
-  const desc=d.details?.english_description||d.description;if(desc)info.append(el('p','',desc));
-  const link=safeUrl(d.target_url,['opensea.io']);if(link){const a=el('a','pill','VIEW ON OPENSEA ↗');a.href=link;a.target='_blank';a.rel='noopener noreferrer';info.append(a)}
-  inner.append(info);card.append(inner);host.append(card);
- }
- if(!items.length)host.append(el('p','muted','Revealed NFTs will appear here after their scheduled reveal.'));
-}
 function renderTextContent(rows,kind,target){const container=$(target);if(!container)return;container.replaceChildren();const items=rows.filter(x=>x.kind===kind&&(!x.starts_at||new Date(x.starts_at)<=new Date())&&(!x.ends_at||new Date(x.ends_at)>new Date())).slice(0,6);
 if(!items.length){if(kind==='promotion'){const empty=el('div','empty','No active promotions have been published.');container.append(empty)}return}
 for(const item of items){const card=el('article','mivo-managed-card');card.append(el('h4','',item.details?.english_title||item.title));const desc=item.details?.english_description||item.description;if(desc)card.append(el('p','muted',desc));const url=safeUrl(item.target_url);if(url){const a=el('a','pill','VIEW DETAILS ↗');a.href=url;a.target='_blank';a.rel='noopener noreferrer';card.append(a)}container.append(card)}}
@@ -110,7 +92,6 @@ async function load(){
      renderTextContent(rows,'promotion','offersBody');
      renderTextContent(rows,'announcement','announcementsBody');
      renderRoadmap(rows);
-     renderRevealedCollection(rows);
      const count=rows.filter(x=>x.kind==='promotion').length;
      if($('offersCount'))$('offersCount').textContent=String(count);
    }catch(e){console.warn('MIVO render:',e);report('render')}
